@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wealth Command Centre — Suthan & Pami</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #060b14;
+    --card: #0d1829;
+    --border: #1e3a5f;
+    --blue: #3b82f6;
+    --blue-dim: #1d4ed8;
+    --teal: #06b6d4;
+    --gold: #f59e0b;
+    --purple: #8b5cf6;
+    --green: #10b981;
+    --green-dark: #0d3d1e;
+    --red: #ef4444;
+    --red-dark: #2d0a0a;
+    --yellow: #eab308;
+    --yellow-dark: #2d2600;
+    --orange: #f97316;
+    --orange-dark: #2d1200;
+    --muted: #4a7fa5;
+    --text: #e2e8f0;
+    --subtext: #94a3b8;
+  }
+  body { font-family: 'DM Mono', 'Courier New', monospace; background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px; }
+  h1 { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 4px; color: #93c5fd; }
+  .subtitle { font-size: 11px; color: var(--muted); letter-spacing: 2px; margin-top: 2px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .card-title { font-size: 10px; letter-spacing: 3px; color: var(--muted); font-weight: 500; margin-bottom: 12px; text-transform: uppercase; }
+  .big-num { font-family: 'Bebas Neue', sans-serif; font-size: 48px; line-height: 1; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .progress-track { background: #0f2034; border-radius: 4px; height: 8px; overflow: hidden; margin-top: 4px; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+  .progress-sm { height: 5px; }
+  .token-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #111e2e; font-size: 12px; }
+  .token-row:last-child { border-bottom: none; }
+  .btn { background: #1e3a5f; border: 1px solid #2d5a8f; color: #93c5fd; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+  .btn:hover { background: #2d5a8f; }
+  .btn-save { background: var(--green-dark); border-color: #22c55e; color: #4ade80; }
+  .btn-save:hover { background: #14532d; }
+  .btn-cancel { background: #2d1212; border-color: #7f1d1d; color: #f87171; }
+  .input-field { background: #0f2034; border: 1px solid var(--border); color: var(--text); padding: 7px 10px; border-radius: 4px; font-family: inherit; font-size: 13px; width: 100%; }
+  .input-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-bottom: 4px; }
+  .badge { font-size: 9px; padding: 2px 8px; border-radius: 3px; letter-spacing: 1px; display: inline-block; }
+  .tag-exit { color: #f87171; font-size: 9px; }
+  .spacer { height: 16px; }
+  .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+  .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .last-updated { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  .alert-panel { padding: 12px 16px; border-radius: 6px; border-left: 3px solid; }
+  .section-label { font-size: 10px; color: var(--muted); letter-spacing: 3px; margin-bottom: 8px; text-transform: uppercase; }
+  .edit-panel { display: none; }
+  .edit-panel.open { display: block; }
+  .checklist-item { font-size: 11px; color: var(--subtext); padding: 4px 0; border-bottom: 1px solid #111e2e; cursor: pointer; user-select: none; }
+  .checklist-item:last-child { border-bottom: none; }
+  .checklist-item.checked { color: #4ade80; }
+  .pathway-bar-wrap { display: flex; gap: 0; align-items: flex-end; height: 90px; }
+  .pathway-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .pathway-bar-inner { width: 70%; position: relative; border-radius: 2px 2px 0 0; border: 1px solid var(--border); overflow: hidden; }
+  .pathway-bar-actual { position: absolute; bottom: 0; left: 0; right: 0; transition: height 0.8s ease; }
+  .pathway-year { font-size: 9px; color: #334155; }
+  .pathway-year.current { color: #93c5fd; }
+  .pathway-amt { font-size: 8px; color: var(--muted); }
+  .footer-row { display: flex; justify-content: space-between; font-size: 10px; color: #1e3a5f; letter-spacing: 1px; margin-top: 16px; flex-wrap: wrap; gap: 4px; }
+  .vest-item { padding: 8px 0; border-bottom: 1px solid #111e2e; }
+  .vest-item:last-child { border-bottom: none; }
+  .error-note { font-size: 10px; color: #f87171; margin-top: 4px; }
+  @media (max-width: 900px) { .grid3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .grid2, .grid3 { grid-template-columns: 1fr; } h1 { font-size: 24px; } }
+</style>
+</head>
+<body>
+
+<div class="header-row">
+  <div>
+    <h1>WEALTH COMMAND CENTRE</h1>
+    <div class="subtitle">SUTHAN &amp; PAMI BALASUBRAMANIAM — FY2026 — TARGET: $9.75M BY 2035</div>
+  </div>
+  <div class="btn-row">
+    <span class="last-updated" id="lastUpdated">Fetching live data...</span>
+    <span id="savedNote" style="display:none;font-size:10px;color:#4ade80;letter-spacing:1px;">✓ BALANCES SAVED</span>
+    <button class="btn" onclick="fetchAll()">↻ REFRESH</button>
+    <button class="btn" id="editBtn" onclick="toggleEdit()">✎ EDIT BALANCES</button>
+    <button class="btn btn-save" id="saveBtn" style="display:none" onclick="saveInputs()">✓ SAVE</button>
+    <button class="btn btn-cancel" id="cancelBtn" style="display:none" onclick="cancelEdit()">✕ CANCEL</button>
+  </div>
+</div>
+
+<!-- EDIT PANEL -->
+<div class="edit-panel card" id="editPanel" style="margin-bottom:20px; border-color:#2d5a8f;">
+  <div class="card-title">Update Balances</div>
+  <div class="grid3" style="margin-bottom:20px;" id="manualInputs"></div>
+  <div class="section-label">Crypto Holdings (Units)</div>
+  <div class="grid3" id="cryptoInputs"></div>
+</div>
+
+<div class="spacer"></div>
+
+<!-- NET WORTH + BREAKDOWN -->
+<div class="grid2" style="margin-bottom:16px;">
+  <div class="card">
+    <div class="card-title">Total Net Worth</div>
+    <div class="big-num" id="netWorthDisplay" style="color:#e2e8f0;">—</div>
+    <div style="font-size:11px; color:var(--muted); margin-top:4px;" id="netWorthFull"></div>
+    <div style="margin-top:16px;">
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:6px; letter-spacing:1px;">
+        <span>2026 TARGET: $2.2M</span><span id="yr26Pct">—</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="yr26Bar" style="background:linear-gradient(90deg,#1d4ed8,#3b82f6);width:0%"></div></div>
+    </div>
+    <div style="margin-top:12px;">
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:6px; letter-spacing:1px;">
+        <span>FREEDOM TARGET: $9.75M</span><span id="freedomPct">—</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="freedomBar" style="background:linear-gradient(90deg,#065f46,#10b981);width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Wealth Breakdown</div>
+    <div id="breakdownBars"></div>
+  </div>
+</div>
+
+<!-- DECISION ALERTS -->
+<div class="section-label">DECISION ALERTS</div>
+<div class="grid3" style="margin-bottom:16px;">
+
+  <!-- BTC Dominance -->
+  <div class="card" id="domCard">
+    <div class="card-title">BTC Dominance Trigger</div>
+    <div class="big-num" id="domValue" style="font-size:52px;">—</div>
+    <div style="font-size:11px; font-weight:500; margin-top:6px; letter-spacing:1px;" id="domLabel"></div>
+    <div style="font-size:11px; color:var(--subtext); margin-top:8px; line-height:1.6;" id="domAction"></div>
+    <div style="margin-top:12px; display:flex; gap:6px; flex-wrap:wrap;">
+      <span class="badge" style="background:#60a5fa22; color:#60a5fa;">&gt;60%</span>
+      <span class="badge" style="background:#a78bfa22; color:#a78bfa;">55–60%</span>
+      <span class="badge" style="background:#34d39922; color:#34d399;">&lt;55%</span>
+      <span class="badge" style="background:#f8717122; color:#f87171;">&lt;45%</span>
+    </div>
+  </div>
+
+  <!-- LVR -->
+  <div class="card" id="lvrCard">
+    <div class="card-title">LVR Status</div>
+    <div class="big-num" style="font-size:52px;" id="lvrValue">—</div>
+    <div style="font-size:11px; font-weight:500; margin-top:6px; letter-spacing:1px;" id="lvrLabel"></div>
+    <div style="font-size:11px; color:var(--subtext); margin-top:8px; line-height:1.5;" id="lvrDesc"></div>
+    <div style="margin-top:12px;">
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px;" id="lvrDebt"></div>
+      <div class="progress-track"><div class="progress-fill" id="lvrBar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Cash Buffer -->
+  <div class="card" id="cashCard">
+    <div class="card-title">Cash Buffer Status</div>
+    <div class="big-num" style="font-size:42px;" id="cashValue">—</div>
+    <div style="font-size:11px; font-weight:500; margin-top:6px; letter-spacing:1px;" id="cashLabel"></div>
+    <div style="margin-top:12px;">
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px;" id="cash3moLabel"></div>
+      <div class="progress-track" style="margin-bottom:8px;"><div class="progress-fill" id="cash3moBar" style="width:0%"></div></div>
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px;" id="cash6moLabel"></div>
+      <div class="progress-track"><div class="progress-fill" id="cash6moBar" style="width:0%"></div></div>
+    </div>
+    <div style="font-size:10px; color:var(--muted); margin-top:8px;" id="cashNote"></div>
+  </div>
+</div>
+
+<!-- CRYPTO + NRGV -->
+<div class="grid2" style="margin-bottom:16px;">
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:0;">Crypto Portfolio</div>
+      <div style="font-size:13px; color:var(--gold);" id="cryptoTotal">—</div>
+    </div>
+    <!-- BTC Target -->
+    <div style="background:#0a1628; border-radius:6px; padding:10px 12px; margin-bottom:12px; border:1px solid var(--border);">
+      <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:6px;" id="btcTargetLabel"></div>
+      <div class="progress-track" style="height:6px;"><div class="progress-fill" id="btcTargetBar" style="background:linear-gradient(90deg,#d97706,#f59e0b);width:0%"></div></div>
+    </div>
+    <div id="tokenList"></div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <div class="card">
+      <div class="card-title">NRGV Stock Price</div>
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <div class="big-num" style="color:var(--teal);" id="nrgvPrice">—</div>
+        <div style="font-size:11px; color:var(--muted);" id="nrgvNote">USD (~15min delay)</div>
+      </div>
+      <div style="font-size:11px; color:var(--subtext); margin-top:4px;" id="nrgvDetails"></div>
+      <!-- Thesis checklist -->
+      <div style="margin-top:12px; padding:10px 12px; background:#0a1628; border-radius:6px; border:1px solid var(--border);">
+        <div class="card-title" style="margin-bottom:8px;">Recovery Thesis Checklist</div>
+        <div id="thesisChecklist"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Upcoming RSU Vests</div>
+      <div id="vestList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- WEALTH PATHWAY -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-title">10-Year Wealth Pathway Progress</div>
+  <div class="pathway-bar-wrap" id="pathwayBars"></div>
+  <div style="font-size:10px; color:var(--muted); text-align:center; letter-spacing:1px; margin-top:8px;" id="pathwayNote"></div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer-row">
+  <span>CRYPTO: COINGECKO — REFRESHES EVERY 5 MIN</span>
+  <span>NRGV: YAHOO FINANCE — ~15 MIN DELAY</span>
+  <span>PROPERTY / SUPER / CASH: MANUAL UPDATE</span>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────────
+const FREEDOM_TARGET = 9750000;
+const YEAR_TARGET = 2200000;
+const TARGETS = {2026:2200000,2027:2200000,2028:3500000,2029:3500000,2030:5750000,2031:5750000,2032:8000000,2033:8000000,2034:9750000,2035:9750000};
+const COIN_IDS = {BTC:"bitcoin",ETH:"ethereum",SOL:"solana",SUI:"sui",TAO:"bittensor",LINK:"chainlink",ADA:"cardano",SEI:"sei-network",OP:"optimism",ARB:"arbitrum"};
+const EXIT_TARGETS = ["ADA","SEI","OP","ARB"];
+const NRGV_VESTS = [
+  {date:"2026-04-30",units:875,label:"Apr 30, 2026"},
+  {date:"2026-06-30",units:2545,label:"Jun 30, 2026"},
+  {date:"2026-07-31",units:750,label:"Jul 31, 2026"},
+  {date:"2026-09-30",units:2545,label:"Sep 30, 2026"},
+  {date:"2026-10-31",units:750,label:"Oct 31, 2026"},
+  {date:"2026-12-31",units:2545,label:"Dec 31, 2026"},
+];
+const THESIS_ITEMS = [
+  "Revenue targets on track?",
+  "$1.3B backlog stable or growing?",
+  "No going concern language in filings?",
+  "No dilutive equity raise?",
+  "Recovery thesis intact vs last review?"
+];
+
+const STORAGE_KEY = 'wealthDashboard_v1';
+
+const DEFAULT_INPUTS = {
+  homeValue: 1050000, mortgageBalance: 380000,
+  superBalance: 310000, cashOffset: 20000,
+  monthlyExpenses: 8000, nrgvShares: 2175,
+  crypto: {BTC:0.42,ETH:2.1,SOL:18,SUI:2800,TAO:3.2,LINK:120,ADA:4500,SEI:8000,OP:350,ARB:600}
+};
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) { return null; }
+}
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      inputs: state.inputs,
+      thesisChecked: state.thesisChecked,
+      savedAt: new Date().toISOString()
+    }));
+  } catch(e) { console.warn('Could not save to localStorage'); }
+}
+
+const saved = loadFromStorage();
+
+let state = {
+  inputs: saved?.inputs || DEFAULT_INPUTS,
+  prices: {}, btcDom: null, nrgvPrice: null, audUsd: 0.635,
+  thesisChecked: saved?.thesisChecked || [false,false,false,false,false],
+  editMode: false
+};
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + Math.round(n/1e3) + 'K';
+  return '$' + Math.round(n);
+}
+function fmtFull(n) { return '$' + Math.round(n).toLocaleString('en-AU'); }
+function pct(a,b) { return b ? ((a/b)*100).toFixed(1) : '0.0'; }
+function clamp(v,lo,hi) { return Math.max(lo,Math.min(hi,v)); }
+
+function lvrInfo(lvr) {
+  if (lvr < 60) return {bg:'#0d3d1e',border:'#22c55e',text:'#4ade80',label:'GREEN ZONE',desc:'Strong Position — Invest normally across all buckets'};
+  if (lvr < 70) return {bg:'#2d2600',border:'#eab308',text:'#facc15',label:'YELLOW ZONE',desc:'Monitor — No new investment property purchases'};
+  if (lvr < 80) return {bg:'#2d1200',border:'#f97316',text:'#fb923c',label:'ORANGE ZONE',desc:'Caution — Pause non-essential investment spending'};
+  return {bg:'#2d0a0a',border:'#ef4444',text:'#f87171',label:'RED ZONE',desc:'Act Immediately — Halt all discretionary investments'};
+}
+
+function domInfo(d) {
+  const n = parseFloat(d);
+  if (n > 60) return {text:'#60a5fa',label:'BTC DOMINANCE PHASE',action:'Accumulate BTC only. No new alt positions.'};
+  if (n > 55) return {text:'#a78bfa',label:'CONSOLIDATION PHASE',action:'Maintain existing alts. No new positions. Watch closely.'};
+  if (n > 45) return {text:'#34d399',label:'ALTSEASON ONSET — GREEN LIGHT',action:'Begin rotating 5–15% into SOL, SUI, TAO.'};
+  return {text:'#f87171',label:'DANGER ZONE — EXIT ALL ALTS',action:'EXIT ALL ALTS NOW. 50% to BTC, 50% to stablecoins/AUD cash.'};
+}
+
+function cashInfo(cash, mo3, mo6) {
+  if (cash >= mo6) return {text:'#4ade80',bg:'#0d3d1e',label:'TARGET MET',note:'Surplus goes to offset account first.'};
+  if (cash >= mo3) return {text:'#facc15',bg:'#2d2600',label:'FLOOR MET — BUILDING',note:'Continue building toward 6-month target.'};
+  return {text:'#f87171',bg:'#2d0a0a',label:'BELOW FLOOR',note:'⚠ PAUSE ALL INVESTMENTS until 3-month floor is restored.'};
+}
+
+// ── COMPUTED ───────────────────────────────────────────────────────────────────
+function compute() {
+  const inp = state.inputs;
+  const nrgvAud = (state.nrgvPrice || 3.30) / state.audUsd;
+  const nrgvVal = inp.nrgvShares * nrgvAud;
+  const cryptoUsd = Object.entries(inp.crypto).reduce((s,[k,v]) => s + (state.prices[k]||0)*v, 0);
+  const cryptoAud = cryptoUsd / state.audUsd;
+  const equity = inp.homeValue - inp.mortgageBalance;
+  const lvr = inp.homeValue > 0 ? (inp.mortgageBalance / inp.homeValue) * 100 : 0;
+  const total = equity + cryptoAud + inp.superBalance + inp.cashOffset + nrgvVal;
+  const mo3 = inp.monthlyExpenses * 3;
+  const mo6 = inp.monthlyExpenses * 6;
+  const btcHeld = inp.crypto.BTC || 0;
+  return {nrgvAud, nrgvVal, cryptoAud, equity, lvr, total, mo3, mo6, btcHeld};
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────────
+function render() {
+  const inp = state.inputs;
+  const c = compute();
+
+  // Net worth
+  document.getElementById('netWorthDisplay').textContent = fmt(c.total);
+  document.getElementById('netWorthFull').textContent = fmtFull(c.total);
+  document.getElementById('yr26Pct').textContent = pct(c.total, YEAR_TARGET) + '%';
+  document.getElementById('yr26Bar').style.width = clamp(pct(c.total, YEAR_TARGET),0,100) + '%';
+  document.getElementById('freedomPct').textContent = pct(c.total, FREEDOM_TARGET) + '%';
+  document.getElementById('freedomBar').style.width = clamp(pct(c.total, FREEDOM_TARGET),0,100) + '%';
+
+  // Breakdown
+  const buckets = [
+    {label:'Home Equity', val:c.equity, color:'#3b82f6'},
+    {label:'Crypto Portfolio', val:c.cryptoAud, color:'#f59e0b'},
+    {label:'Superannuation', val:inp.superBalance, color:'#8b5cf6'},
+    {label:'Cash / Offset', val:inp.cashOffset, color:'#10b981'},
+    {label:'NRGV RSUs', val:c.nrgvVal, color:'#06b6d4'},
+  ];
+  document.getElementById('breakdownBars').innerHTML = buckets.map(b => `
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+        <span style="color:var(--subtext)">${b.label}</span>
+        <span>${fmt(b.val)} <span style="color:var(--muted);font-size:10px;">(${pct(b.val,c.total)}%)</span></span>
+      </div>
+      <div class="progress-track progress-sm"><div class="progress-fill" style="width:${clamp(pct(b.val,c.total),0,100)}%;background:${b.color}"></div></div>
+    </div>`).join('');
+
+  // BTC Dominance
+  if (state.btcDom) {
+    const di = domInfo(state.btcDom);
+    document.getElementById('domCard').style.borderColor = di.text + '55';
+    document.getElementById('domValue').textContent = state.btcDom + '%';
+    document.getElementById('domValue').style.color = di.text;
+    document.getElementById('domLabel').textContent = di.label;
+    document.getElementById('domLabel').style.color = di.text;
+    document.getElementById('domAction').textContent = di.action;
+  } else {
+    document.getElementById('domValue').textContent = '—';
+    document.getElementById('domAction').textContent = 'Unavailable — check TradingView BTC.D manually';
+    document.getElementById('domAction').style.color = '#f87171';
+  }
+
+  // LVR
+  const li = lvrInfo(c.lvr);
+  const lvrCard = document.getElementById('lvrCard');
+  lvrCard.style.borderColor = li.border + '88';
+  lvrCard.style.background = li.bg;
+  document.getElementById('lvrValue').textContent = c.lvr.toFixed(1) + '%';
+  document.getElementById('lvrValue').style.color = li.text;
+  document.getElementById('lvrLabel').textContent = li.label;
+  document.getElementById('lvrLabel').style.color = li.text;
+  document.getElementById('lvrDesc').textContent = li.desc;
+  document.getElementById('lvrDebt').innerHTML = `<span>Loan: ${fmt(inp.mortgageBalance)}</span><span>Value: ${fmt(inp.homeValue)}</span>`;
+  document.getElementById('lvrBar').style.width = clamp(c.lvr,0,100) + '%';
+  document.getElementById('lvrBar').style.background = li.border;
+
+  // Cash
+  const ci = cashInfo(inp.cashOffset, c.mo3, c.mo6);
+  const cashCard = document.getElementById('cashCard');
+  cashCard.style.borderColor = ci.text + '55';
+  cashCard.style.background = ci.bg;
+  document.getElementById('cashValue').textContent = fmt(inp.cashOffset);
+  document.getElementById('cashValue').style.color = ci.text;
+  document.getElementById('cashLabel').textContent = ci.label;
+  document.getElementById('cashLabel').style.color = ci.text;
+  document.getElementById('cash3moLabel').innerHTML = `<span>3-MONTH FLOOR: ${fmt(c.mo3)}</span>`;
+  document.getElementById('cash3moBar').style.width = clamp((inp.cashOffset/c.mo3)*100,0,100) + '%';
+  document.getElementById('cash3moBar').style.background = inp.cashOffset >= c.mo3 ? '#22c55e' : '#ef4444';
+  document.getElementById('cash6moLabel').innerHTML = `<span>6-MONTH TARGET: ${fmt(c.mo6)}</span>`;
+  document.getElementById('cash6moBar').style.width = clamp((inp.cashOffset/c.mo6)*100,0,100) + '%';
+  document.getElementById('cash6moBar').style.background = inp.cashOffset >= c.mo6 ? '#22c55e' : '#eab308';
+  document.getElementById('cashNote').textContent = ci.note;
+
+  // Crypto
+  document.getElementById('cryptoTotal').textContent = fmt(c.cryptoAud) + ' AUD';
+  const btcPct = clamp((c.btcHeld/1.0)*100,0,100);
+  document.getElementById('btcTargetLabel').innerHTML = `<span>BTC TARGET — 1 BTC BY END 2026</span><span>${c.btcHeld.toFixed(4)} / 1.0 BTC (${btcPct.toFixed(1)}%)</span>`;
+  document.getElementById('btcTargetBar').style.width = btcPct + '%';
+
+  document.getElementById('tokenList').innerHTML = Object.entries(inp.crypto).map(([sym,amt]) => {
+    const price = state.prices[sym];
+    const valUsd = price ? price * amt : null;
+    const valAud = valUsd ? valUsd / state.audUsd : null;
+    const isExit = EXIT_TARGETS.includes(sym);
+    const priceStr = price ? (price < 1 ? '$'+price.toFixed(4) : '$'+price.toLocaleString('en-US',{maximumFractionDigits:2})) : '—';
+    return `<div class="token-row">
+      <div style="width:44px;font-size:11px;font-weight:500;color:${isExit?'#f87171':'var(--text)'}">${sym}</div>
+      <div style="flex:1;font-size:10px;color:var(--muted)">${amt.toLocaleString()} ${isExit?'<span class="tag-exit">EXIT</span>':''}</div>
+      <div style="font-size:11px;color:var(--subtext);margin-right:8px;">${priceStr}</div>
+      <div style="font-size:12px;color:${isExit?'#f87171':'var(--text)'};text-align:right;min-width:70px;">${valAud ? fmt(valAud) : '—'}</div>
+    </div>`;
+  }).join('');
+
+  // NRGV
+  const nPrice = state.nrgvPrice;
+  document.getElementById('nrgvPrice').textContent = nPrice ? '$'+nPrice.toFixed(2) : '$3.30';
+  document.getElementById('nrgvNote').textContent = nPrice ? 'USD (~15 min delay)' : 'USD (est. fallback)';
+  document.getElementById('nrgvDetails').textContent = `${inp.nrgvShares.toLocaleString()} purchased shares — AUD value: ${fmt(c.nrgvVal)}`;
+
+  // Thesis
+  document.getElementById('thesisChecklist').innerHTML = THESIS_ITEMS.map((q,i) => `
+    <div class="checklist-item ${state.thesisChecked[i]?'checked':''}" onclick="toggleThesis(${i})">
+      ${state.thesisChecked[i]?'✓':'☐'} ${q}
+    </div>`).join('');
+
+  // Vests
+  const now = new Date();
+  const upcoming = NRGV_VESTS.filter(v => new Date(v.date) > now).slice(0,3);
+  document.getElementById('vestList').innerHTML = upcoming.length ? upcoming.map(v => {
+    const gross = v.units * c.nrgvAud;
+    const tax = gross * 0.47;
+    return `<div class="vest-item">
+      <div style="display:flex;justify-content:space-between;">
+        <div style="font-size:12px;">${v.label} — ${v.units.toLocaleString()} units</div>
+        <div style="font-size:12px;color:var(--teal);">${fmt(gross)}</div>
+      </div>
+      <div style="font-size:10px;color:#f87171;margin-top:2px;">Tax provision: ${fmt(tax)}</div>
+    </div>`;
+  }).join('') : '<div style="font-size:11px;color:var(--muted);">No upcoming vests found.</div>';
+
+  // Pathway
+  const pathHTML = Object.entries(TARGETS).map(([yr,target]) => {
+    const isCurr = parseInt(yr) === 2026;
+    const barH = (target/FREEDOM_TARGET)*100;
+    const actualPct = isCurr ? clamp((c.total/target)*100,0,100) : 0;
+    return `<div class="pathway-bar-col">
+      <div class="pathway-amt">${fmt(target)}</div>
+      <div class="pathway-bar-inner" style="height:${barH}%;background:${isCurr?'#1e3a5f':'#0d1829'};border-color:${isCurr?'#3b82f6':'#1e3a5f'};">
+        ${isCurr?`<div class="pathway-bar-actual" style="height:${actualPct}%;background:linear-gradient(180deg,#3b82f6,#1d4ed8);"></div>`:''}
+      </div>
+      <div class="pathway-year ${isCurr?'current':''}">${yr}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('pathwayBars').innerHTML = pathHTML;
+  document.getElementById('pathwayNote').textContent = `CURRENT ${fmt(c.total)} vs 2026 TARGET ${fmt(YEAR_TARGET)} — ${pct(c.total,YEAR_TARGET)}% ON TRACK`;
+}
+
+// ── EDIT ───────────────────────────────────────────────────────────────────────
+let tempState = null;
+
+function buildEditPanel() {
+  const inp = state.inputs;
+  const fields = [
+    {label:'Home Value ($AUD)', key:'homeValue'},
+    {label:'Mortgage Balance ($AUD)', key:'mortgageBalance'},
+    {label:'Super Balance ($AUD)', key:'superBalance'},
+    {label:'Cash / Offset ($AUD)', key:'cashOffset'},
+    {label:'Monthly Expenses ($AUD)', key:'monthlyExpenses'},
+    {label:'NRGV Shares Held', key:'nrgvShares'},
+  ];
+  document.getElementById('manualInputs').innerHTML = fields.map(f => `
+    <div>
+      <div class="input-label">${f.label}</div>
+      <input class="input-field" type="number" id="inp_${f.key}" value="${inp[f.key]}">
+    </div>`).join('');
+
+  document.getElementById('cryptoInputs').innerHTML = Object.keys(inp.crypto).map(sym => `
+    <div>
+      <div class="input-label" style="color:${EXIT_TARGETS.includes(sym)?'#f87171':'var(--muted)'}">
+        ${sym} ${EXIT_TARGETS.includes(sym)?'⚠ EXIT':''}
+      </div>
+      <input class="input-field" type="number" step="0.000001" id="inp_crypto_${sym}" value="${inp.crypto[sym]}">
+    </div>`).join('');
+}
+
+function toggleEdit() {
+  state.editMode = !state.editMode;
+  buildEditPanel();
+  document.getElementById('editPanel').className = 'edit-panel card' + (state.editMode?' open':'');
+  document.getElementById('editBtn').style.display = state.editMode ? 'none' : 'inline-block';
+  document.getElementById('saveBtn').style.display = state.editMode ? 'inline-block' : 'none';
+  document.getElementById('cancelBtn').style.display = state.editMode ? 'inline-block' : 'none';
+}
+
+function saveInputs() {
+  const inp = state.inputs;
+  ['homeValue','mortgageBalance','superBalance','cashOffset','monthlyExpenses','nrgvShares'].forEach(k => {
+    const v = parseFloat(document.getElementById('inp_'+k).value);
+    if (!isNaN(v)) inp[k] = v;
+  });
+  Object.keys(inp.crypto).forEach(sym => {
+    const v = parseFloat(document.getElementById('inp_crypto_'+sym).value);
+    if (!isNaN(v)) inp.crypto[sym] = v;
+  });
+  state.editMode = false;
+  document.getElementById('editPanel').className = 'edit-panel card';
+  document.getElementById('editBtn').style.display = 'inline-block';
+  document.getElementById('saveBtn').style.display = 'none';
+  document.getElementById('cancelBtn').style.display = 'none';
+  saveToStorage();
+  const note = document.getElementById('savedNote');
+  note.style.display = 'inline';
+  setTimeout(() => { note.style.display = 'none'; }, 3000);
+  render();
+}
+
+function cancelEdit() {
+  state.editMode = false;
+  document.getElementById('editPanel').className = 'edit-panel card';
+  document.getElementById('editBtn').style.display = 'inline-block';
+  document.getElementById('saveBtn').style.display = 'none';
+  document.getElementById('cancelBtn').style.display = 'none';
+}
+
+function toggleThesis(i) {
+  state.thesisChecked[i] = !state.thesisChecked[i];
+  saveToStorage();
+  render();
+}
+
+// ── FETCH ──────────────────────────────────────────────────────────────────────
+async function fetchCrypto() {
+  try {
+    const ids = Object.values(COIN_IDS).join(',');
+    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`);
+    if (!r.ok) return;
+    const data = await r.json();
+    Object.entries(COIN_IDS).forEach(([sym,id]) => { if (data[id]) state.prices[sym] = data[id].usd; });
+  } catch(e) { console.warn('Crypto prices unavailable'); }
+}
+
+async function fetchDominance() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/global');
+    if (!r.ok) return;
+    const data = await r.json();
+    const d = data.data?.market_cap_percentage?.btc;
+    if (d) state.btcDom = d.toFixed(1);
+  } catch(e) { console.warn('Dominance unavailable'); }
+}
+
+async function fetchNRGV() {
+  try {
+    const r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/NRGV?interval=1d&range=1d');
+    if (!r.ok) { state.nrgvPrice = 3.30; return; }
+    const data = await r.json();
+    const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    state.nrgvPrice = price || 3.30;
+  } catch(e) { state.nrgvPrice = 3.30; }
+}
+
+async function fetchAll() {
+  document.getElementById('lastUpdated').textContent = 'Refreshing...';
+  await Promise.all([fetchCrypto(), fetchDominance(), fetchNRGV()]);
+  render();
+  const t = new Date();
+  document.getElementById('lastUpdated').textContent = `LIVE DATA: ${t.toLocaleTimeString()}`;
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+render();
+fetchAll();
+setInterval(fetchAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>
