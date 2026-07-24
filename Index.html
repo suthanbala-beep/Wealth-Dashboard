@@ -357,6 +357,9 @@ function daysBetween(d1, d2) {
   const a = new Date(d1), b = new Date(d2);
   return Math.round((b - a) / (1000 * 60 * 60 * 24));
 }
+// Treats amounts under half a cent as zero, so float subtraction dust
+// (e.g. 8500.80*0.47 - 282*9.20*1.54 = 4.5e-13) never reads as "still owing".
+function isOwing(n) { return n > 0.005; }
 
 /* ============================= CSV PARSING ============================= */
 
@@ -416,7 +419,7 @@ function parseFlexDate(str) {
 const CATEGORY_KEYWORDS = [
   ['Housing', ['rent', 'mortgage', 'strata', 'council rate', 'body corp', 'real estate', 'landlord']],
   ['Transport', ['uber trip', 'uber *trip', 'myki', 'opal', 'fuel', 'petrol', ' bp ', 'caltex', 'shell ', '7-eleven', 'parking', 'toll', 'linkt', 'transport nsw', 'taxi', 'ola ']],
-  ['Food', ['woolworths', 'coles', ' iga ', 'aldi', 'restaurant', 'cafe', 'mcdonald', 'kfc', 'uber *eats', 'ubereats', 'doordash', 'menulog', 'deliveroo', 'bakery', 'grocer', 'butcher', 'liquor', 'bws', 'dan murphy']],
+  ['Food', ['woolworths', 'coles', ' iga ', 'aldi', 'restaurant', 'cafe', 'mcdonald', 'kfc', 'uber eats', 'uber *eats', 'ubereats', 'doordash', 'menulog', 'deliveroo', 'bakery', 'grocer', 'butcher', 'liquor', 'bws', 'dan murphy']],
   ['Entertainment', ['netflix', 'spotify', 'stan', 'disney', 'cinema', 'event cinemas', 'steam', 'playstation', 'xbox', 'prime video', 'ticketek', 'ticketmaster', 'youtube premium', 'apple.com/bill']],
   ['Utilities', ['agl', 'origin energy', 'energyaustralia', 'telstra', 'optus', 'vodafone', 'tpg', 'internet', 'electricity', 'water corp', 'gas supply', 'red energy', 'amaysim']],
   ['Insurance', ['insurance', ' nib ', 'medibank', 'bupa', 'hcf', 'allianz', 'aami', 'budget direct', 'youi', 'suncorp insur']],
@@ -713,7 +716,7 @@ function saleCalc(s) {
   const heldDays = daysBetween(grant.vestDate, s.saleDate);
   const discountEligible = heldDays >= 365 && gain > 0;
   const netTaxableGain = discountEligible ? gain * 0.5 : gain;
-  const cgtLiability = netTaxableGain > 0 ? netTaxableGain * (state.nrgv.marginalRate / 100) : 0;
+  const cgtLiability = isOwing(netTaxableGain) ? netTaxableGain * (state.nrgv.marginalRate / 100) : 0;
   return { grant, costBasisPerShare, gain, heldDays, discountEligible, netTaxableGain, cgtLiability };
 }
 
@@ -730,14 +733,14 @@ function nrgvTotals() {
     if (remaining > 0) totalSharesHeld += remaining;
     if (status !== 'Unvested') {
       totalIncomeTax += netTaxObligation(g);
-      if (!g.incomeTaxPaid && netTaxObligation(g) > 0) totalIncomeTaxUnpaid += netTaxObligation(g);
+      if (!g.incomeTaxPaid && isOwing(netTaxObligation(g))) totalIncomeTaxUnpaid += netTaxObligation(g);
     }
     if (remaining > 0 && status !== 'Unvested') {
       const gain = (price * fx - g.sharePriceUSD * fx) * remaining;
       const heldDays = daysBetween(g.vestDate, new Date());
       const discountEligible = heldDays >= 365 && gain > 0;
       const taxableGain = discountEligible ? gain * 0.5 : gain;
-      if (taxableGain > 0) unrealisedCGT += taxableGain * (state.nrgv.marginalRate / 100);
+      if (isOwing(taxableGain)) unrealisedCGT += taxableGain * (state.nrgv.marginalRate / 100);
     }
   });
 
@@ -746,7 +749,7 @@ function nrgvTotals() {
     const c = saleCalc(s);
     if (!c) return;
     totalCGT += c.cgtLiability;
-    if (!s.cgtPaid && c.cgtLiability > 0) totalCGTUnpaid += c.cgtLiability;
+    if (!s.cgtPaid && isOwing(c.cgtLiability)) totalCGTUnpaid += c.cgtLiability;
   });
 
   const currentMarketValue = totalSharesHeld * price * fx;
@@ -1198,7 +1201,7 @@ function renderNRGV() {
       ${grants.slice().sort((a, b) => new Date(a.vestDate) - new Date(b.vestDate)).map(g => {
         const status = grantStatus(g);
         const net = netTaxObligation(g);
-        const outstanding = status !== 'Unvested' && !g.incomeTaxPaid && net > 0;
+        const outstanding = status !== 'Unvested' && !g.incomeTaxPaid && isOwing(net);
         return `<tr class="${outstanding ? 'row-outstanding' : ''}">
           <td>${fmtDate(g.vestDate)}</td>
           <td>${g.sharesVesting}</td>
