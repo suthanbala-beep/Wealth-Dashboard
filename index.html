@@ -101,7 +101,7 @@
   <div class="header-row">
     <div>
       <h1>Wealth Dashboard</h1>
-      <div class="subtitle">All data stored locally in your browser. Nothing is uploaded except live price/FX lookups.</div>
+      <div class="subtitle">All data stored locally in your browser. Nothing is uploaded except live price/FX lookups. Prices auto-refresh every 5 minutes while this tab is open.</div>
     </div>
     <div class="btn-row">
       <span class="last-updated" id="globalStatus"></span>
@@ -236,7 +236,7 @@
         <input type="text" id="avApiKey" placeholder="for auto price fetch" oninput="onSettingsChange()">
       </div>
     </div>
-    <div class="note">AUD conversions use the current USD/AUD rate as an approximation for historical vest dates (no free historical FX API is used). Click "Refresh Prices" to pull the live NRGV quote (requires an Alpha Vantage key) and FX rate; otherwise enter values manually above.</div>
+    <div class="note">AUD conversions use the current USD/AUD rate as an approximation for historical vest dates (no free historical FX API is used). The NRGV quote auto-refreshes every 5 minutes if an Alpha Vantage key is set below; otherwise enter the price manually.</div>
 
     <!-- Summary -->
     <div class="grid grid-4" style="margin: 18px 0;" id="nrgvSummary"></div>
@@ -1267,12 +1267,29 @@ function renderAll() {
 
 /* ============================= INIT ============================= */
 
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
+let lastRefreshAttempt = 0;
+
+function refreshPricesThrottled() {
+  if (Date.now() - lastRefreshAttempt < 60 * 1000) return;
+  lastRefreshAttempt = Date.now();
+  refreshPrices();
+}
+
 function init() {
   populateCommonCoins();
   syncSettingsInputs();
   toggleWithholdInputs();
-  document.getElementById('globalStatus').textContent = state.fx.lastUpdated ? ('Prices last refreshed ' + new Date(state.fx.lastUpdated).toLocaleString('en-AU')) : 'Click "Refresh Prices" to fetch live crypto, FX and NRGV data';
+  document.getElementById('globalStatus').textContent = state.fx.lastUpdated ? ('Prices last refreshed ' + new Date(state.fx.lastUpdated).toLocaleString('en-AU')) : 'Fetching live prices…';
   renderAll();
+
+  // Auto-refresh: pull live prices on load, then on a timer while the tab stays open,
+  // and whenever the tab regains focus (throttled to at most once a minute).
+  refreshPricesThrottled();
+  setInterval(() => { if (!document.hidden) refreshPricesThrottled(); }, AUTO_REFRESH_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshPricesThrottled();
+  });
 }
 
 init();
