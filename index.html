@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wealth Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0b0f14;
+    --card: #131a22;
+    --card-alt: #0f151c;
+    --border: #24303c;
+    --text: #e6edf3;
+    --subtext: #8b949e;
+    --muted: #5b6b7a;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --green-bg: #0d2818;
+    --red: #f85149;
+    --red-bg: #2d0f0f;
+    --amber: #d29922;
+    --purple: #a371f7;
+    --teal: #39c5cf;
+    --pink: #f778ba;
+    --radius: 10px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; line-height: 1.4; }
+  .wrap { max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.3px; }
+  h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--text); }
+  .subtitle { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  a { color: var(--accent); }
+  .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; flex-wrap: wrap; gap: 12px; }
+  .btn-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn { background: #1c2733; border: 1px solid #2d3d4d; color: var(--accent); padding: 9px 16px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; transition: background .15s; }
+  .btn:hover { background: #253242; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-green { border-color: #22663a; color: #4ade80; }
+  .btn-green:hover { background: var(--green-bg); }
+  .btn-red { border-color: #7f1d1d; color: #f87171; }
+  .btn-red:hover { background: var(--red-bg); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .grid-nw { grid-template-columns: 1.3fr 1fr; }
+  section { margin-bottom: 24px; }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+  .stat-num { font-size: 28px; font-weight: 700; }
+  .stat-num.big { font-size: 42px; }
+  .stat-sub { font-size: 12px; color: var(--subtext); margin-top: 4px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .muted { color: var(--muted); }
+  .last-updated { font-size: 11px; color: var(--muted); margin-top: 10px; }
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 11px; color: var(--subtext); margin-bottom: 4px; }
+  input[type=text], input[type=number], input[type=date], select {
+    background: var(--card-alt); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 10px; border-radius: 6px; font-family: inherit; font-size: 13px; width: 100%;
+  }
+  input[type=file] { font-size: 12px; color: var(--subtext); }
+  input[type=checkbox] { width: 15px; height: 15px; vertical-align: middle; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid #1a232c; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .table-wrap { overflow-x: auto; }
+  .badge { font-size: 10.5px; padding: 3px 9px; border-radius: 20px; font-weight: 600; display: inline-block; }
+  .badge-vested { background: #0d2818; color: #4ade80; }
+  .badge-unvested { background: #1c2733; color: #8b949e; }
+  .badge-sold { background: #1e2a4a; color: #58a6ff; }
+  .badge-partial { background: #2d2410; color: #d29922; }
+  .row-outstanding { background: rgba(248,81,73,0.08); }
+  .cell-red { color: var(--red); font-weight: 600; }
+  .cell-green { color: var(--green); font-weight: 600; }
+  .add-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; padding: 14px; background: var(--card-alt); border-radius: 8px; border: 1px solid var(--border); }
+  .add-form .field { margin-bottom: 0; min-width: 120px; flex: 1; }
+  .chart-box { position: relative; height: 260px; }
+  .chart-box.tall { height: 300px; }
+  .note { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .status-msg { font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }
+  .status-ok { background: var(--green-bg); color: #4ade80; }
+  .status-err { background: var(--red-bg); color: #f87171; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .empty-state { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
+  .icon-btn { background: none; border: none; color: var(--red); cursor: pointer; font-size: 15px; padding: 2px 6px; }
+  .icon-btn:hover { color: #ff7b72; }
+  footer { text-align: center; font-size: 11px; color: var(--muted); margin: 30px 0 10px; }
+  @media (max-width: 1000px) { .grid-4 { grid-template-columns: 1fr 1fr; } .grid-nw { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } h1 { font-size: 21px; } .stat-num.big { font-size: 32px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header-row">
+    <div>
+      <h1>Wealth Dashboard</h1>
+      <div class="subtitle">All data stored locally in your browser. Nothing is uploaded except live price/FX lookups. Prices auto-refresh every 5 minutes while this tab is open.</div>
+    </div>
+    <div class="btn-row">
+      <span class="last-updated" id="globalStatus"></span>
+      <button class="btn" id="refreshBtn" onclick="refreshPrices()">&#8635; Refresh Prices</button>
+    </div>
+  </div>
+
+  <!-- NET WORTH -->
+  <section>
+    <div class="card">
+      <div class="grid grid-nw">
+        <div>
+          <div class="stat-label">Net Worth</div>
+          <div class="stat-num big" id="netWorthNum">$0.00</div>
+          <div class="stat-sub" id="netWorthSub"></div>
+          <div class="grid grid-4" style="margin-top:18px;" id="netWorthBreakdown"></div>
+        </div>
+        <div class="chart-box tall"><canvas id="allocationChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BANK TRANSACTIONS -->
+  <section class="card">
+    <div class="flex-between">
+      <h2 style="margin:0;">Bank Transactions</h2>
+      <div class="btn-row">
+        <input type="file" id="bankCsvInput" accept=".csv" onchange="handleBankCSV(event)">
+      </div>
+    </div>
+    <div class="note">Upload a CommBank-style CSV (Date, Amount, Description, Balance — header optional). Uploading replaces previously loaded transactions.</div>
+    <div id="bankStatus"></div>
+    <div class="grid grid-2" style="margin-top:16px;">
+      <div>
+        <div class="stat-label">Monthly Cash Flow</div>
+        <div class="chart-box"><canvas id="cashflowChart"></canvas></div>
+      </div>
+      <div>
+        <div class="stat-label">Spending by Category</div>
+        <div class="chart-box"><canvas id="spendingChart"></canvas></div>
+      </div>
+    </div>
+    <div class="table-wrap" style="margin-top:16px;">
+      <table id="categoryTable"></table>
+    </div>
+    <div class="last-updated" id="bankLastUpdated"></div>
+  </section>
+
+  <!-- CRYPTO -->
+  <section class="card">
+    <h2>Crypto Portfolio</h2>
+    <div class="note">Enter the <a href="https://www.coingecko.com/en/coins" target="_blank" rel="noopener">CoinGecko coin ID</a> (found in the coin's URL, e.g. "bitcoin", "ethereum", "solana"), quantity held, and your purchase price per unit in AUD.</div>
+    <div class="add-form" style="margin-top:12px;">
+      <div class="field">
+        <label>Coin ID</label>
+        <input type="text" id="cryptoCoinId" list="commonCoins" placeholder="bitcoin">
+        <datalist id="commonCoins"></datalist>
+      </div>
+      <div class="field"><label>Quantity</label><input type="number" id="cryptoQty" step="any" placeholder="0.5"></div>
+      <div class="field"><label>Purchase Price (AUD/unit)</label><input type="number" id="cryptoPrice" step="any" placeholder="45000"></div>
+      <button class="btn btn-green" onclick="addCryptoHolding()">+ Add Coin</button>
+    </div>
+    <div class="grid grid-2">
+      <div class="table-wrap"><table id="cryptoTable"></table></div>
+      <div class="chart-box"><canvas id="cryptoAllocChart"></canvas></div>
+    </div>
+    <div class="last-updated" id="cryptoLastUpdated"></div>
+  </section>
+
+  <!-- FIDELITY -->
+  <section class="card">
+    <div class="flex-between">
+      <h2 style="margin:0;">Fidelity Investments</h2>
+      <input type="file" id="fidelityCsvInput" accept=".csv" onchange="handleFidelityCSV(event)">
+    </div>
+    <div class="note">Upload a CSV with columns: Symbol, Shares, Current Value, and optionally Cost Basis. Uploading replaces previously loaded holdings. Set an asset class per holding for the allocation chart.</div>
+    <div id="fidelityStatus"></div>
+    <div class="grid grid-3" style="margin-top:16px;">
+      <div>
+        <div class="stat-label">Total Portfolio Value</div>
+        <div class="stat-num" id="fidelityTotal">$0.00</div>
+      </div>
+      <div>
+        <div class="stat-label">Overall Return</div>
+        <div class="stat-num" id="fidelityReturn">—</div>
+      </div>
+      <div class="chart-box" style="height:140px;"><canvas id="fidelityAllocChart"></canvas></div>
+    </div>
+    <div class="table-wrap" style="margin-top:16px;"><table id="fidelityTable"></table></div>
+    <div class="last-updated" id="fidelityLastUpdated"></div>
+  </section>
+
+  <!-- PROPERTY & SUPER -->
+  <section class="grid grid-2">
+    <div class="card">
+      <h2>Property</h2>
+      <div class="field">
+        <label>Estimated Property Value (AUD)</label>
+        <input type="number" id="propertyValue" step="any" placeholder="0" oninput="updatePropertySuper()">
+      </div>
+      <div class="last-updated" id="propertyLastUpdated"></div>
+    </div>
+    <div class="card">
+      <h2>Superannuation</h2>
+      <div class="field">
+        <label>Current Super Balance (AUD)</label>
+        <input type="number" id="superValue" step="any" placeholder="0" oninput="updatePropertySuper()">
+      </div>
+      <div class="last-updated" id="superLastUpdated"></div>
+    </div>
+  </section>
+
+  <!-- NRGV -->
+  <section class="card">
+    <h2>NRGV RSU Vesting Tracker</h2>
+
+    <div class="grid grid-4" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Marginal Tax Rate (%, incl. Medicare levy)</label>
+        <input type="number" id="marginalRate" step="0.1" value="47" oninput="onSettingsChange()">
+      </div>
+      <div class="field">
+        <label>Current NRGV Price (USD)</label>
+        <input type="number" id="nrgvPriceUSD" step="any" oninput="onSettingsChange()">
+      </div>
+      <div class="field">
+        <label>USD/AUD FX Rate</label>
+        <input type="number" id="fxRate" step="any" oninput="onSettingsChange()">
+      </div>
+      <div class="field">
+        <label>Alpha Vantage API Key (optional, for live NRGV price)</label>
+        <input type="text" id="avApiKey" placeholder="for auto price fetch" oninput="onSettingsChange()">
+      </div>
+    </div>
+    <div class="note">AUD conversions use the current USD/AUD rate as an approximation for historical vest dates (no free historical FX API is used). The NRGV quote auto-refreshes every 5 minutes if an Alpha Vantage key is set below; otherwise enter the price manually.</div>
+
+    <!-- Summary -->
+    <div class="grid grid-4" style="margin: 18px 0;" id="nrgvSummary"></div>
+
+    <!-- Grants -->
+    <h3 style="font-size:14px;margin-bottom:10px;">Vesting Schedule</h3>
+    <div class="add-form">
+      <div class="field"><label>Vest Date</label><input type="date" id="grantVestDate"></div>
+      <div class="field"><label>Shares Vesting</label><input type="number" id="grantShares" step="any"></div>
+      <div class="field"><label>Share Price at Vest (USD)</label><input type="number" id="grantPrice" step="any"></div>
+      <div class="field">
+        <label>Withholding Type</label>
+        <select id="grantWithholdType" onchange="toggleWithholdInputs()">
+          <option value="shares">Shares Withheld</option>
+          <option value="cash">Cash Withheld</option>
+        </select>
+      </div>
+      <div class="field" id="withheldSharesField"><label>Shares Withheld</label><input type="number" id="grantWithheldShares" step="any" value="0"></div>
+      <div class="field" id="withheldCashField" style="display:none;"><label>Cash Withheld (AUD)</label><input type="number" id="grantWithheldCash" step="any" value="0"></div>
+      <button class="btn btn-green" onclick="addGrant()">+ Add Vest Event</button>
+    </div>
+    <div class="table-wrap"><table id="grantsTable"></table></div>
+
+    <!-- Sales -->
+    <h3 style="font-size:14px;margin:22px 0 10px;">Sales &amp; CGT</h3>
+    <div class="add-form">
+      <div class="field">
+        <label>Grant (Vest Date)</label>
+        <select id="saleGrantId"></select>
+      </div>
+      <div class="field"><label>Sale Date</label><input type="date" id="saleDate"></div>
+      <div class="field"><label>Quantity Sold</label><input type="number" id="saleQty" step="any"></div>
+      <div class="field"><label>Sale Price / Share (AUD)</label><input type="number" id="salePrice" step="any"></div>
+      <button class="btn btn-green" onclick="addSale()">+ Add Sale</button>
+    </div>
+    <div class="table-wrap"><table id="salesTable"></table></div>
+
+    <div class="last-updated" id="nrgvLastUpdated"></div>
+  </section>
+
+  <footer>Wealth Dashboard — runs entirely in your browser. Data lives in localStorage; clearing your browser data will remove it.</footer>
+</div>
+
+<script>
+'use strict';
+
+/* ============================= STATE ============================= */
+
+const STORAGE_KEY = 'wealthDashboardState_v1';
+
+function defaultState() {
+  return {
+    bank: { transactions: [], lastUpdated: null },
+    crypto: { holdings: [], lastUpdated: null },
+    fidelity: { holdings: [], lastUpdated: null },
+    property: { value: 0, lastUpdated: null },
+    super: { value: 0, lastUpdated: null },
+    fx: { usdAud: null, lastUpdated: null },
+    nrgv: {
+      marginalRate: 47,
+      currentPriceUSD: null,
+      priceLastUpdated: null,
+      avApiKey: '',
+      grants: [],
+      sales: []
+    }
+  };
+}
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    const d = defaultState();
+    return {
+      bank: Object.assign(d.bank, parsed.bank),
+      crypto: Object.assign(d.crypto, parsed.crypto),
+      fidelity: Object.assign(d.fidelity, parsed.fidelity),
+      property: Object.assign(d.property, parsed.property),
+      super: Object.assign(d.super, parsed.super),
+      fx: Object.assign(d.fx, parsed.fx),
+      nrgv: Object.assign(d.nrgv, parsed.nrgv)
+    };
+  } catch (e) {
+    console.error('Failed to load state', e);
+    return defaultState();
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+/* ============================= FORMATTING ============================= */
+
+const AUD_FMT = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmtAUD(n) { return AUD_FMT.format(isFinite(n) ? n : 0); }
+function fmtPct(n) { return (isFinite(n) ? n : 0).toFixed(2) + '%'; }
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(dt)) return '—';
+  return dt.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function fmtTimestamp(iso) {
+  if (!iso) return 'Never updated';
+  const dt = new Date(iso);
+  return 'Last updated: ' + dt.toLocaleDateString('en-AU') + ' ' + dt.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+}
+function daysBetween(d1, d2) {
+  const a = new Date(d1), b = new Date(d2);
+  return Math.round((b - a) / (1000 * 60 * 60 * 24));
+}
+// Treats amounts under half a cent as zero, so float subtraction dust
+// (e.g. 8500.80*0.47 - 282*9.20*1.54 = 4.5e-13) never reads as "still owing".
+function isOwing(n) { return n > 0.005; }
+
+/* ============================= CSV PARSING ============================= */
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = false; }
+      } else cur += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { result.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  result.push(cur);
+  return result.map(s => s.trim());
+}
+
+function parseCSV(text) {
+  return text.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0).map(parseCSVLine);
+}
+
+function parseMoney(str) {
+  if (typeof str === 'number') return str;
+  if (!str) return 0;
+  str = String(str).trim();
+  let neg = false;
+  if (/^\(.*\)$/.test(str)) { neg = true; str = str.slice(1, -1); }
+  str = str.replace(/[$,\s]/g, '');
+  if (str.startsWith('-')) { neg = true; str = str.slice(1); }
+  else if (str.startsWith('+')) { str = str.slice(1); }
+  const n = parseFloat(str);
+  if (isNaN(n)) return 0;
+  return neg ? -n : n;
+}
+
+function parseFlexDate(str) {
+  str = String(str).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) { const d = new Date(str); if (!isNaN(d)) return d; }
+  const m = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (m) {
+    let [, d, mo, y] = m;
+    if (y.length === 2) y = (parseInt(y, 10) < 50 ? '20' : '19') + y;
+    const dt = new Date(`${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00`);
+    if (!isNaN(dt)) return dt;
+  }
+  const d2 = new Date(str);
+  return isNaN(d2) ? null : d2;
+}
+
+/* ============================= CATEGORISATION ============================= */
+
+const CATEGORY_KEYWORDS = [
+  ['Housing', ['rent', 'mortgage', 'strata', 'council rate', 'body corp', 'real estate', 'landlord']],
+  ['Transport', ['uber trip', 'uber *trip', 'myki', 'opal', 'fuel', 'petrol', ' bp ', 'caltex', 'shell ', '7-eleven', 'parking', 'toll', 'linkt', 'transport nsw', 'taxi', 'ola ']],
+  ['Food', ['woolworths', 'coles', ' iga ', 'aldi', 'restaurant', 'cafe', 'mcdonald', 'kfc', 'uber eats', 'uber *eats', 'ubereats', 'doordash', 'menulog', 'deliveroo', 'bakery', 'grocer', 'butcher', 'liquor', 'bws', 'dan murphy']],
+  ['Entertainment', ['netflix', 'spotify', 'stan', 'disney', 'cinema', 'event cinemas', 'steam', 'playstation', 'xbox', 'prime video', 'ticketek', 'ticketmaster', 'youtube premium', 'apple.com/bill']],
+  ['Utilities', ['agl', 'origin energy', 'energyaustralia', 'telstra', 'optus', 'vodafone', 'tpg', 'internet', 'electricity', 'water corp', 'gas supply', 'red energy', 'amaysim']],
+  ['Insurance', ['insurance', ' nib ', 'medibank', 'bupa', 'hcf', 'allianz', 'aami', 'budget direct', 'youi', 'suncorp insur']],
+  ['Investments', ['commsec', 'selfwealth', 'superannuation', 'super contribution', 'vanguard', 'betashares', 'pearler', 'stake ', 'sharesies', 'raiz', 'spaceship']]
+];
+
+function categorize(desc, amount) {
+  const d = (' ' + (desc || '').toLowerCase() + ' ');
+  if (amount > 0) {
+    if (/refund|reversal/.test(d)) {
+      for (const [cat, kws] of CATEGORY_KEYWORDS) if (kws.some(k => d.includes(k))) return cat;
+    }
+    return 'Income';
+  }
+  for (const [cat, kws] of CATEGORY_KEYWORDS) {
+    if (kws.some(k => d.includes(k))) return cat;
+  }
+  return 'Uncategorised';
+}
+
+function handleBankCSV(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const rows = parseCSV(reader.result);
+      if (!rows.length) throw new Error('Empty file');
+      let startIdx = 0;
+      let cols = { date: 0, amount: 1, description: 2, balance: 3 };
+      const first = rows[0].map(c => c.toLowerCase());
+      const looksLikeHeader = first.some(c => /date/.test(c)) && first.some(c => /amount|debit|credit/.test(c));
+      if (looksLikeHeader) {
+        startIdx = 1;
+        cols = {
+          date: first.findIndex(c => c.includes('date')),
+          amount: first.findIndex(c => c.includes('amount')),
+          description: first.findIndex(c => c.includes('desc') || c.includes('narrat')),
+          balance: first.findIndex(c => c.includes('balance'))
+        };
+        if (cols.amount === -1) cols.amount = 1;
+        if (cols.description === -1) cols.description = 2;
+        if (cols.balance === -1) cols.balance = 3;
+      }
+      const transactions = [];
+      for (let i = startIdx; i < rows.length; i++) {
+        const r = rows[i];
+        if (r.length < 3) continue;
+        const date = parseFlexDate(r[cols.date]);
+        const amount = parseMoney(r[cols.amount]);
+        const description = r[cols.description] || '';
+        const balance = cols.balance >= 0 && r[cols.balance] !== undefined ? parseMoney(r[cols.balance]) : null;
+        if (!date) continue;
+        transactions.push({ date: date.toISOString(), amount, description, balance, category: categorize(description, amount) });
+      }
+      transactions.sort((a, b) => new Date(a.date) - new Date(b.date));
+      state.bank.transactions = transactions;
+      state.bank.lastUpdated = new Date().toISOString();
+      saveState();
+      document.getElementById('bankStatus').innerHTML = `<div class="status-msg status-ok">Loaded ${transactions.length} transactions.</div>`;
+    } catch (e) {
+      document.getElementById('bankStatus').innerHTML = `<div class="status-msg status-err">Could not parse file: ${e.message}</div>`;
+      return;
+    } finally {
+      renderAll();
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+
+/* ============================= FIDELITY CSV ============================= */
+
+function handleFidelityCSV(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const rows = parseCSV(reader.result);
+      if (!rows.length) throw new Error('Empty file');
+      let startIdx = 0;
+      let cols = { symbol: 0, shares: 1, currentValue: 2, costBasis: -1 };
+      const first = rows[0].map(c => c.toLowerCase());
+      const looksLikeHeader = first.some(c => c.includes('symbol')) || first.some(c => c.includes('shares'));
+      if (looksLikeHeader) {
+        startIdx = 1;
+        cols = {
+          symbol: first.findIndex(c => c.includes('symbol') || c.includes('ticker')),
+          shares: first.findIndex(c => c.includes('shares') || c.includes('quantity')),
+          currentValue: first.findIndex(c => c.includes('current value') || c.includes('market value') || c === 'value'),
+          costBasis: first.findIndex(c => c.includes('cost basis') || c.includes('cost'))
+        };
+        if (cols.symbol === -1) cols.symbol = 0;
+        if (cols.shares === -1) cols.shares = 1;
+        if (cols.currentValue === -1) cols.currentValue = 2;
+      }
+      const existing = {};
+      (state.fidelity.holdings || []).forEach(h => { existing[h.symbol] = h.assetClass; });
+      const holdings = [];
+      for (let i = startIdx; i < rows.length; i++) {
+        const r = rows[i];
+        if (r.length < 2) continue;
+        const symbol = (r[cols.symbol] || '').toUpperCase();
+        if (!symbol) continue;
+        const shares = parseMoney(r[cols.shares]);
+        const currentValue = parseMoney(r[cols.currentValue]);
+        const costBasis = cols.costBasis >= 0 && r[cols.costBasis] !== undefined ? parseMoney(r[cols.costBasis]) : null;
+        holdings.push({ id: uid(), symbol, shares, currentValue, costBasis, assetClass: existing[symbol] || 'Equity' });
+      }
+      state.fidelity.holdings = holdings;
+      state.fidelity.lastUpdated = new Date().toISOString();
+      saveState();
+      document.getElementById('fidelityStatus').innerHTML = `<div class="status-msg status-ok">Loaded ${holdings.length} holdings.</div>`;
+    } catch (e) {
+      document.getElementById('fidelityStatus').innerHTML = `<div class="status-msg status-err">Could not parse file: ${e.message}</div>`;
+      return;
+    } finally {
+      renderAll();
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+
+function updateFidelityAssetClass(id, val) {
+  const h = state.fidelity.holdings.find(x => x.id === id);
+  if (h) { h.assetClass = val; saveState(); renderAll(); }
+}
+
+function deleteFidelityHolding(id) {
+  state.fidelity.holdings = state.fidelity.holdings.filter(x => x.id !== id);
+  saveState();
+  renderAll();
+}
+
+/* ============================= CRYPTO ============================= */
+
+const COMMON_COINS = {
+  bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', cardano: 'ADA', ripple: 'XRP',
+  dogecoin: 'DOGE', litecoin: 'LTC', polkadot: 'DOT', chainlink: 'LINK',
+  'avalanche-2': 'AVAX', 'matic-network': 'MATIC', binancecoin: 'BNB',
+  tron: 'TRX', cosmos: 'ATOM', uniswap: 'UNI', stellar: 'XLM', 'usd-coin': 'USDC', tether: 'USDT'
+};
+
+function populateCommonCoins() {
+  const dl = document.getElementById('commonCoins');
+  dl.innerHTML = Object.entries(COMMON_COINS).map(([id, sym]) => `<option value="${id}">${sym}</option>`).join('');
+}
+
+function addCryptoHolding() {
+  const coinId = document.getElementById('cryptoCoinId').value.trim().toLowerCase();
+  const qty = parseFloat(document.getElementById('cryptoQty').value);
+  const price = parseFloat(document.getElementById('cryptoPrice').value);
+  if (!coinId || !isFinite(qty) || qty <= 0 || !isFinite(price) || price < 0) {
+    alert('Please enter a valid coin ID, quantity, and purchase price.');
+    return;
+  }
+  state.crypto.holdings.push({ id: uid(), coinId, quantity: qty, purchasePriceAUD: price, currentPriceAUD: null });
+  saveState();
+  document.getElementById('cryptoCoinId').value = '';
+  document.getElementById('cryptoQty').value = '';
+  document.getElementById('cryptoPrice').value = '';
+  renderAll();
+  fetchCryptoPrices();
+}
+
+function deleteCryptoHolding(id) {
+  state.crypto.holdings = state.crypto.holdings.filter(x => x.id !== id);
+  saveState();
+  renderAll();
+}
+
+async function fetchCryptoPrices() {
+  const ids = [...new Set(state.crypto.holdings.map(h => h.coinId))];
+  if (!ids.length) return;
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids.join(','))}&vs_currencies=aud`);
+    if (!res.ok) throw new Error('CoinGecko request failed (' + res.status + ')');
+    const data = await res.json();
+    state.crypto.holdings.forEach(h => {
+      if (data[h.coinId] && typeof data[h.coinId].aud === 'number') {
+        h.currentPriceAUD = data[h.coinId].aud;
+      }
+    });
+    state.crypto.lastUpdated = new Date().toISOString();
+    saveState();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+/* ============================= FX ============================= */
+
+async function fetchFX() {
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    if (!res.ok) throw new Error('FX request failed (' + res.status + ')');
+    const data = await res.json();
+    const rate = data && data.rates && data.rates.AUD;
+    if (!rate) throw new Error('AUD rate not found in response');
+    state.fx.usdAud = rate;
+    state.fx.lastUpdated = new Date().toISOString();
+    saveState();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+/* ============================= NRGV PRICE ============================= */
+
+async function fetchNRGVPrice() {
+  const key = state.nrgv.avApiKey;
+  if (!key) return { ok: false, error: 'No Alpha Vantage API key set — using manual price.' };
+  try {
+    const res = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=NRGV&apikey=${encodeURIComponent(key)}`);
+    if (!res.ok) throw new Error('Alpha Vantage request failed (' + res.status + ')');
+    const data = await res.json();
+    const price = data && data['Global Quote'] && parseFloat(data['Global Quote']['05. price']);
+    if (!price || !isFinite(price)) throw new Error('No price returned (rate limit or invalid symbol/key)');
+    state.nrgv.currentPriceUSD = price;
+    state.nrgv.priceLastUpdated = new Date().toISOString();
+    saveState();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+/* ============================= REFRESH ALL ============================= */
+
+async function refreshPrices() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.textContent = 'Refreshing…';
+  const statusEl = document.getElementById('globalStatus');
+  const errors = [];
+
+  const [fxRes, cryptoRes, nrgvRes] = await Promise.all([fetchFX(), fetchCryptoPrices(), fetchNRGVPrice()]);
+  if (!fxRes.ok) errors.push('FX: ' + fxRes.error);
+  if (cryptoRes && !cryptoRes.ok) errors.push('Crypto: ' + cryptoRes.error);
+  if (!nrgvRes.ok) errors.push('NRGV: ' + nrgvRes.error);
+
+  btn.disabled = false;
+  btn.textContent = '↻ Refresh Prices';
+  statusEl.textContent = errors.length ? ('Refreshed with issues — ' + errors.join(' | ')) : ('All prices refreshed at ' + new Date().toLocaleTimeString('en-AU'));
+  statusEl.style.color = errors.length ? 'var(--red)' : 'var(--muted)';
+
+  syncSettingsInputs();
+  saveState();
+  renderAll();
+}
+
+/* ============================= NRGV CALCS ============================= */
+
+function getFxRate() { return state.fx.usdAud || 1.5; }
+
+function sharesReceived(g) {
+  return g.sharesVesting - (g.withholdType === 'shares' ? (g.withheldShares || 0) : 0);
+}
+function marketValueAUD(g) {
+  return g.sharesVesting * g.sharePriceUSD * getFxRate();
+}
+function incomeTaxLiability(g) {
+  return marketValueAUD(g) * (state.nrgv.marginalRate / 100);
+}
+function taxWithheldAUD(g) {
+  return g.withholdType === 'shares' ? (g.withheldShares || 0) * g.sharePriceUSD * getFxRate() : (g.withheldCash || 0);
+}
+function netTaxObligation(g) {
+  return incomeTaxLiability(g) - taxWithheldAUD(g);
+}
+function soldQtyForGrant(grantId) {
+  return state.nrgv.sales.filter(s => s.grantId === grantId).reduce((a, s) => a + s.quantity, 0);
+}
+function grantStatus(g) {
+  const today = new Date();
+  const vestDate = new Date(g.vestDate);
+  if (vestDate > today) return 'Unvested';
+  const sold = soldQtyForGrant(g.id);
+  const received = sharesReceived(g);
+  if (received > 0 && sold >= received) return 'Sold';
+  if (sold > 0) return 'Partially Sold';
+  return 'Vested';
+}
+
+function saleCalc(s) {
+  const grant = state.nrgv.grants.find(g => g.id === s.grantId);
+  if (!grant) return null;
+  const costBasisPerShare = grant.sharePriceUSD * getFxRate();
+  const gain = (s.salePriceAUD - costBasisPerShare) * s.quantity;
+  const heldDays = daysBetween(grant.vestDate, s.saleDate);
+  const discountEligible = heldDays >= 365 && gain > 0;
+  const netTaxableGain = discountEligible ? gain * 0.5 : gain;
+  const cgtLiability = isOwing(netTaxableGain) ? netTaxableGain * (state.nrgv.marginalRate / 100) : 0;
+  return { grant, costBasisPerShare, gain, heldDays, discountEligible, netTaxableGain, cgtLiability };
+}
+
+function nrgvTotals() {
+  const grants = state.nrgv.grants;
+  const sales = state.nrgv.sales;
+  const fx = getFxRate();
+  const price = state.nrgv.currentPriceUSD || 0;
+
+  let totalSharesHeld = 0, totalIncomeTaxUnpaid = 0, totalIncomeTax = 0, unrealisedCGT = 0;
+  grants.forEach(g => {
+    const status = grantStatus(g);
+    const remaining = sharesReceived(g) - soldQtyForGrant(g.id);
+    if (remaining > 0) totalSharesHeld += remaining;
+    if (status !== 'Unvested') {
+      totalIncomeTax += netTaxObligation(g);
+      if (!g.incomeTaxPaid && isOwing(netTaxObligation(g))) totalIncomeTaxUnpaid += netTaxObligation(g);
+    }
+    if (remaining > 0 && status !== 'Unvested') {
+      const gain = (price * fx - g.sharePriceUSD * fx) * remaining;
+      const heldDays = daysBetween(g.vestDate, new Date());
+      const discountEligible = heldDays >= 365 && gain > 0;
+      const taxableGain = discountEligible ? gain * 0.5 : gain;
+      if (isOwing(taxableGain)) unrealisedCGT += taxableGain * (state.nrgv.marginalRate / 100);
+    }
+  });
+
+  let totalCGT = 0, totalCGTUnpaid = 0;
+  sales.forEach(s => {
+    const c = saleCalc(s);
+    if (!c) return;
+    totalCGT += c.cgtLiability;
+    if (!s.cgtPaid && isOwing(c.cgtLiability)) totalCGTUnpaid += c.cgtLiability;
+  });
+
+  const currentMarketValue = totalSharesHeld * price * fx;
+  const netPosition = currentMarketValue - totalIncomeTaxUnpaid - totalCGTUnpaid;
+
+  return { totalSharesHeld, currentMarketValue, totalIncomeTax, totalIncomeTaxUnpaid, totalCGT, totalCGTUnpaid, netPosition, unrealisedCGT };
+}
+
+/* ============================= NRGV UI ACTIONS ============================= */
+
+function toggleWithholdInputs() {
+  const type = document.getElementById('grantWithholdType').value;
+  document.getElementById('withheldSharesField').style.display = type === 'shares' ? '' : 'none';
+  document.getElementById('withheldCashField').style.display = type === 'cash' ? '' : 'none';
+}
+
+function addGrant() {
+  const vestDate = document.getElementById('grantVestDate').value;
+  const shares = parseFloat(document.getElementById('grantShares').value);
+  const price = parseFloat(document.getElementById('grantPrice').value);
+  const withholdType = document.getElementById('grantWithholdType').value;
+  const withheldShares = parseFloat(document.getElementById('grantWithheldShares').value) || 0;
+  const withheldCash = parseFloat(document.getElementById('grantWithheldCash').value) || 0;
+  if (!vestDate || !isFinite(shares) || shares <= 0 || !isFinite(price) || price < 0) {
+    alert('Please enter a valid vest date, shares vesting, and share price.');
+    return;
+  }
+  state.nrgv.grants.push({
+    id: uid(), vestDate, sharesVesting: shares, sharePriceUSD: price,
+    withholdType, withheldShares, withheldCash, incomeTaxPaid: false
+  });
+  saveState();
+  document.getElementById('grantVestDate').value = '';
+  document.getElementById('grantShares').value = '';
+  document.getElementById('grantPrice').value = '';
+  document.getElementById('grantWithheldShares').value = '0';
+  document.getElementById('grantWithheldCash').value = '0';
+  renderAll();
+}
+
+function deleteGrant(id) {
+  state.nrgv.grants = state.nrgv.grants.filter(g => g.id !== id);
+  state.nrgv.sales = state.nrgv.sales.filter(s => s.grantId !== id);
+  saveState();
+  renderAll();
+}
+
+function toggleGrantPaid(id) {
+  const g = state.nrgv.grants.find(x => x.id === id);
+  if (g) { g.incomeTaxPaid = !g.incomeTaxPaid; saveState(); renderAll(); }
+}
+
+function addSale() {
+  const grantId = document.getElementById('saleGrantId').value;
+  const saleDate = document.getElementById('saleDate').value;
+  const qty = parseFloat(document.getElementById('saleQty').value);
+  const price = parseFloat(document.getElementById('salePrice').value);
+  const grant = state.nrgv.grants.find(g => g.id === grantId);
+  if (!grant || !saleDate || !isFinite(qty) || qty <= 0 || !isFinite(price) || price < 0) {
+    alert('Please select a grant and enter a valid sale date, quantity, and sale price.');
+    return;
+  }
+  const available = sharesReceived(grant) - soldQtyForGrant(grant.id);
+  if (qty > available) {
+    alert(`Only ${available} shares remain available to sell for this grant.`);
+    return;
+  }
+  state.nrgv.sales.push({ id: uid(), grantId, saleDate, quantity: qty, salePriceAUD: price, cgtPaid: false });
+  saveState();
+  document.getElementById('saleDate').value = '';
+  document.getElementById('saleQty').value = '';
+  document.getElementById('salePrice').value = '';
+  renderAll();
+}
+
+function deleteSale(id) {
+  state.nrgv.sales = state.nrgv.sales.filter(s => s.id !== id);
+  saveState();
+  renderAll();
+}
+
+function toggleSalePaid(id) {
+  const s = state.nrgv.sales.find(x => x.id === id);
+  if (s) { s.cgtPaid = !s.cgtPaid; saveState(); renderAll(); }
+}
+
+function onSettingsChange() {
+  state.nrgv.marginalRate = parseFloat(document.getElementById('marginalRate').value) || 47;
+  state.nrgv.currentPriceUSD = parseFloat(document.getElementById('nrgvPriceUSD').value) || state.nrgv.currentPriceUSD;
+  state.fx.usdAud = parseFloat(document.getElementById('fxRate').value) || state.fx.usdAud;
+  state.nrgv.avApiKey = document.getElementById('avApiKey').value.trim();
+  saveState();
+  renderAll();
+}
+
+function syncSettingsInputs() {
+  document.getElementById('marginalRate').value = state.nrgv.marginalRate;
+  document.getElementById('nrgvPriceUSD').value = state.nrgv.currentPriceUSD || '';
+  document.getElementById('fxRate').value = state.fx.usdAud || '';
+  document.getElementById('avApiKey').value = state.nrgv.avApiKey || '';
+}
+
+/* ============================= PROPERTY / SUPER ============================= */
+
+function updatePropertySuper() {
+  state.property.value = parseFloat(document.getElementById('propertyValue').value) || 0;
+  state.property.lastUpdated = new Date().toISOString();
+  state.super.value = parseFloat(document.getElementById('superValue').value) || 0;
+  state.super.lastUpdated = new Date().toISOString();
+  saveState();
+  renderAll();
+}
+
+/* ============================= CHARTS ============================= */
+
+let charts = {};
+function renderChart(id, config) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  if (typeof Chart === 'undefined') {
+    const parent = ctx.parentElement;
+    if (parent && !parent.querySelector('.chart-fallback')) {
+      const msg = document.createElement('div');
+      msg.className = 'chart-fallback empty-state';
+      msg.textContent = 'Chart library failed to load — check your internet connection and reload.';
+      parent.appendChild(msg);
+    }
+    return;
+  }
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, config);
+}
+
+const CATEGORY_COLORS = {
+  Income: '#3fb950', Housing: '#58a6ff', Transport: '#d29922', Food: '#f778ba',
+  Entertainment: '#a371f7', Utilities: '#39c5cf', Insurance: '#ffa657',
+  Investments: '#56d364', Uncategorised: '#8b949e'
+};
+const ASSET_COLORS = { Cash: '#58a6ff', Crypto: '#d29922', Investments: '#a371f7', Property: '#39c5cf', Super: '#56d364', NRGV: '#f778ba' };
+const DEFAULT_PALETTE = ['#58a6ff', '#d29922', '#a371f7', '#39c5cf', '#56d364', '#f778ba', '#ffa657', '#f85149', '#8b949e'];
+
+Chart.defaults.color = '#8b949e';
+Chart.defaults.borderColor = '#24303c';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+/* ============================= RENDER: NET WORTH ============================= */
+
+function computeCashBalance() {
+  const txs = state.bank.transactions;
+  if (!txs.length) return 0;
+  const withBalance = txs.filter(t => t.balance !== null && t.balance !== undefined);
+  if (!withBalance.length) return 0;
+  return withBalance[withBalance.length - 1].balance;
+}
+
+function computeCryptoValue() {
+  return state.crypto.holdings.reduce((sum, h) => sum + (h.currentPriceAUD || h.purchasePriceAUD || 0) * h.quantity, 0);
+}
+function computeFidelityValue() {
+  return state.fidelity.holdings.reduce((sum, h) => sum + (h.currentValue || 0), 0);
+}
+
+function renderNetWorth() {
+  const cash = computeCashBalance();
+  const crypto = computeCryptoValue();
+  const fidelity = computeFidelityValue();
+  const property = state.property.value || 0;
+  const superBal = state.super.value || 0;
+  const nrgv = nrgvTotals();
+  const nrgvValue = nrgv.currentMarketValue;
+  const outstandingTax = nrgv.totalIncomeTaxUnpaid + nrgv.totalCGTUnpaid;
+
+  const grossAssets = cash + crypto + fidelity + property + superBal + nrgvValue;
+  const netWorth = grossAssets - outstandingTax;
+
+  document.getElementById('netWorthNum').textContent = fmtAUD(netWorth);
+  document.getElementById('netWorthSub').textContent = outstandingTax > 0
+    ? `${fmtAUD(grossAssets)} gross assets − ${fmtAUD(outstandingTax)} outstanding NRGV tax`
+    : `${fmtAUD(grossAssets)} gross assets`;
+
+  const items = [
+    ['Cash (bank balance)', cash], ['Crypto', crypto], ['Investments (Fidelity)', fidelity],
+    ['Property', property], ['Super', superBal], ['NRGV (current value)', nrgvValue]
+  ];
+  document.getElementById('netWorthBreakdown').innerHTML = items.map(([label, val]) => `
+    <div>
+      <div class="stat-label">${label}</div>
+      <div style="font-size:16px;font-weight:600;">${fmtAUD(val)}</div>
+    </div>`).join('');
+
+  renderChart('allocationChart', {
+    type: 'pie',
+    data: {
+      labels: ['Cash', 'Crypto', 'Investments', 'Property', 'Super', 'NRGV'],
+      datasets: [{
+        data: [cash, crypto, fidelity, property, superBal, nrgvValue],
+        backgroundColor: ['Cash', 'Crypto', 'Investments', 'Property', 'Super', 'NRGV'].map(k => ASSET_COLORS[k]),
+        borderColor: '#131a22', borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 12, font: { size: 11.5 } } } }
+    }
+  });
+}
+
+/* ============================= RENDER: BANK ============================= */
+
+function renderBank() {
+  const txs = state.bank.transactions;
+  document.getElementById('bankLastUpdated').textContent = fmtTimestamp(state.bank.lastUpdated);
+
+  const monthly = {};
+  txs.forEach(t => {
+    const d = new Date(t.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!monthly[key]) monthly[key] = { income: 0, expenses: 0 };
+    if (t.amount > 0) monthly[key].income += t.amount;
+    else monthly[key].expenses += Math.abs(t.amount);
+  });
+  const months = Object.keys(monthly).sort();
+  renderChart('cashflowChart', {
+    type: 'bar',
+    data: {
+      labels: months.map(m => new Date(m + '-01').toLocaleDateString('en-AU', { month: 'short', year: '2-digit' })),
+      datasets: [
+        { label: 'Income', data: months.map(m => monthly[m].income), backgroundColor: '#3fb950' },
+        { label: 'Expenses', data: months.map(m => monthly[m].expenses), backgroundColor: '#f85149' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { y: { ticks: { callback: v => '$' + v.toLocaleString() } } },
+      plugins: { legend: { labels: { boxWidth: 12, font: { size: 11.5 } } } }
+    }
+  });
+
+  const catTotals = {};
+  txs.filter(t => t.amount < 0).forEach(t => {
+    catTotals[t.category] = (catTotals[t.category] || 0) + Math.abs(t.amount);
+  });
+  const catLabels = Object.keys(catTotals);
+  renderChart('spendingChart', {
+    type: 'doughnut',
+    data: {
+      labels: catLabels,
+      datasets: [{ data: catLabels.map(c => catTotals[c]), backgroundColor: catLabels.map(c => CATEGORY_COLORS[c] || '#8b949e'), borderColor: '#131a22', borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 10, font: { size: 11.5 } } } }
+    }
+  });
+
+  const allCats = ['Income', 'Housing', 'Transport', 'Food', 'Entertainment', 'Utilities', 'Insurance', 'Investments', 'Uncategorised'];
+  const incomeTotal = txs.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const table = document.getElementById('categoryTable');
+  if (!txs.length) {
+    table.innerHTML = '<tr><td class="empty-state">No transactions loaded yet. Upload a bank CSV above.</td></tr>';
+  } else {
+    table.innerHTML = `
+      <tr><th>Category</th><th>Total</th><th>Transactions</th></tr>
+      <tr><td><span class="badge" style="background:${CATEGORY_COLORS.Income}22;color:${CATEGORY_COLORS.Income}">Income</span></td><td class="pos">${fmtAUD(incomeTotal)}</td><td>${txs.filter(t => t.amount > 0).length}</td></tr>
+      ${allCats.filter(c => c !== 'Income').map(c => `
+        <tr><td><span class="badge" style="background:${CATEGORY_COLORS[c]}22;color:${CATEGORY_COLORS[c]}">${c}</span></td>
+        <td class="neg">${fmtAUD(catTotals[c] || 0)}</td>
+        <td>${txs.filter(t => t.category === c).length}</td></tr>`).join('')}
+    `;
+  }
+}
+
+/* ============================= RENDER: CRYPTO ============================= */
+
+function renderCrypto() {
+  document.getElementById('cryptoLastUpdated').textContent = fmtTimestamp(state.crypto.lastUpdated);
+  const holdings = state.crypto.holdings;
+  const table = document.getElementById('cryptoTable');
+  const totalValue = computeCryptoValue();
+
+  if (!holdings.length) {
+    table.innerHTML = '<tr><td class="empty-state">No crypto holdings added yet.</td></tr>';
+  } else {
+    table.innerHTML = `
+      <tr><th>Coin</th><th>Qty</th><th>Purchase Price</th><th>Current Price</th><th>Value</th><th>P&amp;L</th><th>P&amp;L %</th><th>Alloc.</th><th></th></tr>
+      ${holdings.map(h => {
+        const current = h.currentPriceAUD;
+        const value = (current || h.purchasePriceAUD) * h.quantity;
+        const pnl = current !== null && current !== undefined ? (current - h.purchasePriceAUD) * h.quantity : null;
+        const pnlPct = current !== null && current !== undefined && h.purchasePriceAUD > 0 ? ((current - h.purchasePriceAUD) / h.purchasePriceAUD) * 100 : null;
+        const alloc = totalValue > 0 ? (value / totalValue) * 100 : 0;
+        const sym = COMMON_COINS[h.coinId] || h.coinId.toUpperCase();
+        return `<tr>
+          <td>${sym} <span class="muted" style="font-size:11px;">(${h.coinId})</span></td>
+          <td>${h.quantity}</td>
+          <td>${fmtAUD(h.purchasePriceAUD)}</td>
+          <td>${current !== null && current !== undefined ? fmtAUD(current) : '<span class="muted">—</span>'}</td>
+          <td>${fmtAUD(value)}</td>
+          <td class="${pnl === null ? '' : pnl >= 0 ? 'pos' : 'neg'}">${pnl === null ? '—' : fmtAUD(pnl)}</td>
+          <td class="${pnlPct === null ? '' : pnlPct >= 0 ? 'pos' : 'neg'}">${pnlPct === null ? '—' : fmtPct(pnlPct)}</td>
+          <td>${fmtPct(alloc)}</td>
+          <td><button class="icon-btn" onclick="deleteCryptoHolding('${h.id}')">&#10005;</button></td>
+        </tr>`;
+      }).join('')}
+    `;
+  }
+
+  renderChart('cryptoAllocChart', {
+    type: 'pie',
+    data: {
+      labels: holdings.map(h => COMMON_COINS[h.coinId] || h.coinId.toUpperCase()),
+      datasets: [{
+        data: holdings.map(h => (h.currentPriceAUD || h.purchasePriceAUD) * h.quantity),
+        backgroundColor: holdings.map((_, i) => DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]),
+        borderColor: '#131a22', borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 10, font: { size: 11.5 } } } }
+    }
+  });
+}
+
+/* ============================= RENDER: FIDELITY ============================= */
+
+function renderFidelity() {
+  document.getElementById('fidelityLastUpdated').textContent = fmtTimestamp(state.fidelity.lastUpdated);
+  const holdings = state.fidelity.holdings;
+  const table = document.getElementById('fidelityTable');
+  const total = computeFidelityValue();
+  document.getElementById('fidelityTotal').textContent = fmtAUD(total);
+
+  const withCost = holdings.filter(h => h.costBasis !== null && h.costBasis !== undefined && h.costBasis > 0);
+  if (withCost.length) {
+    const costSum = withCost.reduce((s, h) => s + h.costBasis, 0);
+    const valSum = withCost.reduce((s, h) => s + h.currentValue, 0);
+    const ret = costSum > 0 ? ((valSum - costSum) / costSum) * 100 : 0;
+    const el = document.getElementById('fidelityReturn');
+    el.textContent = fmtPct(ret);
+    el.className = 'stat-num ' + (ret >= 0 ? 'pos' : 'neg');
+  } else {
+    document.getElementById('fidelityReturn').textContent = 'No cost basis provided';
+    document.getElementById('fidelityReturn').className = 'stat-num muted';
+  }
+
+  if (!holdings.length) {
+    table.innerHTML = '<tr><td class="empty-state">No holdings loaded yet. Upload a Fidelity CSV above.</td></tr>';
+  } else {
+    table.innerHTML = `
+      <tr><th>Symbol</th><th>Shares</th><th>Current Value</th><th>Cost Basis</th><th>Return</th><th>Asset Class</th><th>Alloc.</th><th></th></tr>
+      ${holdings.map(h => {
+        const ret = h.costBasis ? ((h.currentValue - h.costBasis) / h.costBasis) * 100 : null;
+        const alloc = total > 0 ? (h.currentValue / total) * 100 : 0;
+        return `<tr>
+          <td>${h.symbol}</td>
+          <td>${h.shares}</td>
+          <td>${fmtAUD(h.currentValue)}</td>
+          <td>${h.costBasis ? fmtAUD(h.costBasis) : '<span class="muted">—</span>'}</td>
+          <td class="${ret === null ? '' : ret >= 0 ? 'pos' : 'neg'}">${ret === null ? '—' : fmtPct(ret)}</td>
+          <td>
+            <select onchange="updateFidelityAssetClass('${h.id}', this.value)" style="width:110px;">
+              ${['Equity', 'ETF', 'Bond', 'Cash', 'Other'].map(c => `<option value="${c}" ${h.assetClass === c ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+          </td>
+          <td>${fmtPct(alloc)}</td>
+          <td><button class="icon-btn" onclick="deleteFidelityHolding('${h.id}')">&#10005;</button></td>
+        </tr>`;
+      }).join('')}
+    `;
+  }
+
+  const byClass = {};
+  holdings.forEach(h => { byClass[h.assetClass] = (byClass[h.assetClass] || 0) + h.currentValue; });
+  const classLabels = Object.keys(byClass);
+  renderChart('fidelityAllocChart', {
+    type: 'pie',
+    data: {
+      labels: classLabels,
+      datasets: [{ data: classLabels.map(c => byClass[c]), backgroundColor: classLabels.map((_, i) => DEFAULT_PALETTE[i % DEFAULT_PALETTE.length]), borderColor: '#131a22', borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { boxWidth: 10, padding: 6, font: { size: 10.5 } } } }
+    }
+  });
+}
+
+/* ============================= RENDER: PROPERTY / SUPER ============================= */
+
+function renderPropertySuper() {
+  document.getElementById('propertyValue').value = state.property.value || '';
+  document.getElementById('superValue').value = state.super.value || '';
+  document.getElementById('propertyLastUpdated').textContent = fmtTimestamp(state.property.lastUpdated);
+  document.getElementById('superLastUpdated').textContent = fmtTimestamp(state.super.lastUpdated);
+}
+
+/* ============================= RENDER: NRGV ============================= */
+
+function statusBadge(status) {
+  const map = { Unvested: 'badge-unvested', Vested: 'badge-vested', Sold: 'badge-sold', 'Partially Sold': 'badge-partial' };
+  return `<span class="badge ${map[status] || 'badge-unvested'}">${status}</span>`;
+}
+
+function renderNRGV() {
+  document.getElementById('nrgvLastUpdated').textContent = 'FX ' + fmtTimestamp(state.fx.lastUpdated) + ' &nbsp;|&nbsp; NRGV price ' + fmtTimestamp(state.nrgv.priceLastUpdated);
+  const totals = nrgvTotals();
+
+  document.getElementById('nrgvSummary').innerHTML = `
+    <div>
+      <div class="stat-label">Shares Held</div>
+      <div style="font-size:20px;font-weight:700;">${totals.totalSharesHeld.toLocaleString()}</div>
+    </div>
+    <div>
+      <div class="stat-label">Current Market Value</div>
+      <div style="font-size:20px;font-weight:700;">${fmtAUD(totals.currentMarketValue)}</div>
+    </div>
+    <div>
+      <div class="stat-label">Income Tax (paid/owing)</div>
+      <div style="font-size:20px;font-weight:700;" class="${totals.totalIncomeTaxUnpaid > 0 ? 'neg' : ''}">${fmtAUD(totals.totalIncomeTax)}</div>
+      ${totals.totalIncomeTaxUnpaid > 0 ? `<div class="stat-sub neg">${fmtAUD(totals.totalIncomeTaxUnpaid)} outstanding</div>` : ''}
+    </div>
+    <div>
+      <div class="stat-label">CGT (paid/owing)</div>
+      <div style="font-size:20px;font-weight:700;" class="${totals.totalCGTUnpaid > 0 ? 'neg' : ''}">${fmtAUD(totals.totalCGT)}</div>
+      ${totals.totalCGTUnpaid > 0 ? `<div class="stat-sub neg">${fmtAUD(totals.totalCGTUnpaid)} outstanding</div>` : ''}
+    </div>
+    <div>
+      <div class="stat-label">Net Position (after tax obligations)</div>
+      <div style="font-size:20px;font-weight:700;">${fmtAUD(totals.netPosition)}</div>
+    </div>
+    <div>
+      <div class="stat-label">Unrealised CGT if Sold Today</div>
+      <div style="font-size:20px;font-weight:700;">${fmtAUD(totals.unrealisedCGT)}</div>
+    </div>
+  `;
+
+  const grants = state.nrgv.grants;
+  const gTable = document.getElementById('grantsTable');
+  if (!grants.length) {
+    gTable.innerHTML = '<tr><td class="empty-state">No vest events added yet.</td></tr>';
+  } else {
+    gTable.innerHTML = `
+      <tr>
+        <th>Vest Date</th><th>Shares Vesting</th><th>Price at Vest (USD)</th><th>Market Value (AUD)</th>
+        <th>Income Tax Liability</th><th>Tax Withheld</th><th>Net Tax Obligation</th><th>Shares Received</th>
+        <th>Status</th><th>Paid</th><th></th>
+      </tr>
+      ${grants.slice().sort((a, b) => new Date(a.vestDate) - new Date(b.vestDate)).map(g => {
+        const status = grantStatus(g);
+        const net = netTaxObligation(g);
+        const outstanding = status !== 'Unvested' && !g.incomeTaxPaid && isOwing(net);
+        return `<tr class="${outstanding ? 'row-outstanding' : ''}">
+          <td>${fmtDate(g.vestDate)}</td>
+          <td>${g.sharesVesting}</td>
+          <td>US$${g.sharePriceUSD.toFixed(2)}</td>
+          <td>${fmtAUD(marketValueAUD(g))}</td>
+          <td>${fmtAUD(incomeTaxLiability(g))}</td>
+          <td>${g.withholdType === 'shares' ? (g.withheldShares || 0) + ' shares' : fmtAUD(g.withheldCash || 0)}</td>
+          <td class="${outstanding ? 'cell-red' : ''}">${fmtAUD(net)}</td>
+          <td>${sharesReceived(g)}</td>
+          <td>${statusBadge(status)}</td>
+          <td>${status !== 'Unvested' ? `<input type="checkbox" ${g.incomeTaxPaid ? 'checked' : ''} onchange="toggleGrantPaid('${g.id}')">` : '—'}</td>
+          <td><button class="icon-btn" onclick="deleteGrant('${g.id}')">&#10005;</button></td>
+        </tr>`;
+      }).join('')}
+    `;
+  }
+
+  const grantSelect = document.getElementById('saleGrantId');
+  const vestedGrants = grants.filter(g => grantStatus(g) !== 'Unvested' && (sharesReceived(g) - soldQtyForGrant(g.id)) > 0);
+  grantSelect.innerHTML = vestedGrants.length
+    ? vestedGrants.map(g => `<option value="${g.id}">${fmtDate(g.vestDate)} — ${sharesReceived(g) - soldQtyForGrant(g.id)} available</option>`).join('')
+    : '<option value="">No vested shares available</option>';
+
+  const sales = state.nrgv.sales;
+  const sTable = document.getElementById('salesTable');
+  if (!sales.length) {
+    sTable.innerHTML = '<tr><td class="empty-state">No sales recorded yet.</td></tr>';
+  } else {
+    sTable.innerHTML = `
+      <tr>
+        <th>Sale Date</th><th>Vest Date</th><th>Qty</th><th>Sale Price</th><th>Cost Basis</th>
+        <th>Capital Gain/Loss</th><th>Discount</th><th>Net Taxable Gain</th><th>Est. CGT</th><th>Paid</th><th></th>
+      </tr>
+      ${sales.slice().sort((a, b) => new Date(a.saleDate) - new Date(b.saleDate)).map(s => {
+        const c = saleCalc(s);
+        if (!c) return '';
+        const outstanding = !s.cgtPaid && c.cgtLiability > 0;
+        return `<tr class="${outstanding ? 'row-outstanding' : ''}">
+          <td>${fmtDate(s.saleDate)}</td>
+          <td>${fmtDate(c.grant.vestDate)}</td>
+          <td>${s.quantity}</td>
+          <td>${fmtAUD(s.salePriceAUD)}</td>
+          <td>${fmtAUD(c.costBasisPerShare)}</td>
+          <td class="${c.gain >= 0 ? 'pos' : 'neg'}">${fmtAUD(c.gain)}</td>
+          <td>${c.discountEligible ? '50% applied' : 'None'}</td>
+          <td>${fmtAUD(c.netTaxableGain)}</td>
+          <td class="${outstanding ? 'cell-red' : ''}">${fmtAUD(c.cgtLiability)}</td>
+          <td>${c.cgtLiability > 0 ? `<input type="checkbox" ${s.cgtPaid ? 'checked' : ''} onchange="toggleSalePaid('${s.id}')">` : '—'}</td>
+          <td><button class="icon-btn" onclick="deleteSale('${s.id}')">&#10005;</button></td>
+        </tr>`;
+      }).join('')}
+    `;
+  }
+}
+
+/* ============================= RENDER ALL ============================= */
+
+function renderAll() {
+  [renderNetWorth, renderBank, renderCrypto, renderFidelity, renderPropertySuper, renderNRGV].forEach(fn => {
+    try { fn(); } catch (e) { console.error('Render failed:', fn.name, e); }
+  });
+}
+
+/* ============================= INIT ============================= */
+
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
+let lastRefreshAttempt = 0;
+
+function refreshPricesThrottled() {
+  if (Date.now() - lastRefreshAttempt < 60 * 1000) return;
+  lastRefreshAttempt = Date.now();
+  refreshPrices();
+}
+
+function init() {
+  populateCommonCoins();
+  syncSettingsInputs();
+  toggleWithholdInputs();
+  document.getElementById('globalStatus').textContent = state.fx.lastUpdated ? ('Prices last refreshed ' + new Date(state.fx.lastUpdated).toLocaleString('en-AU')) : 'Fetching live prices…';
+  renderAll();
+
+  // Auto-refresh: pull live prices on load, then on a timer while the tab stays open,
+  // and whenever the tab regains focus (throttled to at most once a minute).
+  refreshPricesThrottled();
+  setInterval(() => { if (!document.hidden) refreshPricesThrottled(); }, AUTO_REFRESH_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshPricesThrottled();
+  });
+}
+
+init();
+</script>
+</body>
+</html>
